@@ -94,6 +94,7 @@ plt.title('EH23 Homoeolog Expression Bias (HEB)')
 plt.ylabel('Samples')
 plt.xlabel('1:1 Gene Pairs')
 plt.yticks(rotation=0)
+plt.figsize(height=2.75, width=3.75)
 
 # Move the legend outside the plot using bbox_to_anchor
 legend = ax.legend(title='Values', loc='lower center', labels=["A Biased", "B Biased", "Balanced"], bbox_to_anchor=(0.5, -0.3), ncol=3)
