@@ -34,7 +34,9 @@ tpms.to_csv(out, sep='\t', index=True)
 output_lines = []
 
 # Create a list of column headers to process
-columns_to_process = ["EH23_Early_Flower", "EH23_Foliage", "EH23_Foliage_12light", "EH23_Late_Flower", "EH23_Roots", "EH23_Shoottips"]
+columns_to_process = ["EH23_Early_Flower", "EH23_Foliage",
+                      "EH23_Foliage_12light", "EH23_Late_Flower",
+                      "EH23_Roots", "EH23_Shoottips"]
 
 # Initialize a dictionary to store values for each column
 column_values = {column: {} for column in columns_to_process}
@@ -90,6 +92,8 @@ df = df.set_index(['GID1', 'GID2']).T
 
 # Count occurrences of "A," "B," and "C" in each row
 count_df = df.apply(lambda row: row.value_counts(), axis=1).fillna(0).astype(int)
+count_df.index = ["Early Flower", "Foliage", "Foliage (12light)",
+                    "Late Flower", "Roots", "Shoot tips"]
 
 # Create a horizontally flipped stacked bar graph with custom colors
 ax = count_df.plot(kind='barh', stacked=True, figsize=(PANEL_WIDTH, PANEL_HEIGHT), edgecolor='black',
@@ -105,7 +109,7 @@ plt.tight_layout()
 
 # Move the legend outside the plot using bbox_to_anchor
 legend = ax.legend(loc='lower center', labels=["A Biased", "B Biased", "Balanced"],
-                   bbox_to_anchor=(0.15, 1.05), ncol=3)
+                   bbox_to_anchor=(0.25, 1.05), ncol=3)
 
 # Set legend colors to match custom colors
 for handle, label in zip(legend.legend_handles, ["A", "B", "C"]):
