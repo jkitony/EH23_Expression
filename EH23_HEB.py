@@ -5,7 +5,7 @@ from matplotlib import pyplot
 import matplotlib.pyplot as plt
 import numpy as np
 
-COLOR_PALETTE = ("#1E90FF04", "#FFA50004", "lightgrey")
+COLOR_PALETTE = ("#1E90FF", "#FFA500", "lightgrey")
 
 df = pd.read_csv('EH23a_EH23b_ortholog_blast_fractionation.txt', sep=' ', header=None, names=["GID1", "GID2","ID"])
 df=df.drop("ID",axis=1)
@@ -107,7 +107,7 @@ for handle, label in zip(legend.legend_handles, ["A", "B", "C"]):
     handle.set_color({"A": COLOR_PALETTE[0], "B": COLOR_PALETTE[1], "C": COLOR_PALETTE[2]}[label])
 
 # Save the heatmap plot to a file 
-plt.savefig('EH23_homeolog_tissues_specific.svg', dpi=300, bbox_inches='tight')
+plt.savefig('EH23_homeolog_tissues_specific.svg', bbox_inches='tight')
 
 # Show the plot
 plt.show()
@@ -132,14 +132,14 @@ df_b_log2 = -np.log2(df_b_values + 1)  # Adding 1 to avoid log(0) and negating t
 fig, axes = plt.subplots(1, 2, figsize=(12, 4), sharey=True)
 
 # Plot for "EH23b" (flipped) - Now plotted before "EH23a"
-hist_b, bins_b, _ = axes[0].hist(df_b_log2.values.flatten(), bins=20, color='blue', edgecolor='black')
+hist_b, bins_b, _ = axes[0].hist(df_b_log2.values.flatten(), bins=20, color=COLOR_PALETTE[0], edgecolor='black')
 axes[0].set_title('Homoeolog Expression Bias - EH23b')
 axes[0].set_xlabel('Log2 Expression')
 axes[0].set_ylabel('Count')
 axes[0].grid(axis='y', alpha=0.75)
 
 # Plot for "EH23a" - Now plotted after "EH23b"
-hist_a, bins_a, _ = axes[1].hist(df_a_log2.values.flatten(), bins=20, color='brown', edgecolor='black')
+hist_a, bins_a, _ = axes[1].hist(df_a_log2.values.flatten(), bins=20, color=COLOR_PALETTE[1], edgecolor='black')
 axes[1].set_title('Homoeolog Expression Bias - EH23a')
 axes[1].set_xlabel('Log2 Expression')
 axes[1].grid(axis='y', alpha=0.75)
@@ -163,7 +163,7 @@ axes[1].set_xticklabels([str(x) for x in xticks_a])
 plt.tight_layout()
 
 # Save the heatmap plot to a file
-plt.savefig('EH23_homeolog_global.svg', dpi=300, bbox_inches='tight')
+plt.savefig('EH23_homeolog_global.svg', bbox_inches='tight')
 
 plt.show()
 
@@ -204,8 +204,8 @@ fig, ax = plt.subplots(figsize=(10, 6))
 
 x = range(len(counts_a))
 width = 0.4
-ax.bar(x, counts_a.values(), width, label='EH23a', color='brown', align='center')
-ax.bar(x, counts_b.values(), width, label='EH23b', color='blue', align='edge')
+ax.bar(x, counts_a.values(), width, label='EH23a', color=COLOR_PALETTE[0], align='center')
+ax.bar(x, counts_b.values(), width, label='EH23b', color=COLOR_PALETTE[1], align='edge')
 
 ax.set_xlabel('Chromosome')
 ax.set_ylabel('Count')
@@ -215,7 +215,7 @@ plt.xticks(x, counts_a.keys())
 plt.tight_layout()
 
 # Save the heatmap plot to a file 
-plt.savefig('EH23_homeolog_chr_level_specific.svg', dpi=300, bbox_inches='tight')
+plt.savefig('EH23_homeolog_chr_level_specific.svg', bbox_inches='tight')
 
 # Show the plot
 plt.show()
