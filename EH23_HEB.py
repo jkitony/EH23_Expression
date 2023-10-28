@@ -3,6 +3,10 @@ import pandas as pd
 import os
 from matplotlib import pyplot
 import matplotlib.pyplot as plt
+import numpy as np
+
+COLOR_PALETTE = ("#1E90FF04", "#FFA50004", "lightgrey")
+
 df = pd.read_csv('EH23a_EH23b_ortholog_blast_fractionation.txt', sep=' ', header=None, names=["GID1", "GID2","ID"])
 df=df.drop("ID",axis=1)
 df.columns=("GID1","GID2")
@@ -87,24 +91,23 @@ count_df = df.apply(lambda row: row.value_counts(), axis=1).fillna(0).astype(int
 
 # Create a horizontally flipped stacked bar graph with custom colors
 ax = count_df.plot(kind='barh', stacked=True, figsize=(10, 6),
-                   color={"A": "brown", "B": "blue", "C": "lightgrey"})
+                   color={"A": COLOR_PALETTE[0], "B": COLOR_PALETTE[1], "C": COLOR_PALETTE[2]})
 
 # Set labels and title
 plt.title('EH23 Homoeolog Expression Bias (HEB)')
 plt.ylabel('Samples')
 plt.xlabel('1:1 Gene Pairs')
 plt.yticks(rotation=0)
-plt.figsize(height=2.75, width=3.75)
 
 # Move the legend outside the plot using bbox_to_anchor
 legend = ax.legend(title='Values', loc='lower center', labels=["A Biased", "B Biased", "Balanced"], bbox_to_anchor=(0.5, -0.3), ncol=3)
 
 # Set legend colors to match custom colors
 for handle, label in zip(legend.legend_handles, ["A", "B", "C"]):
-    handle.set_color({"A": "brown", "B": "blue", "C": "lightgrey"}[label])
+    handle.set_color({"A": COLOR_PALETTE[0], "B": COLOR_PALETTE[1], "C": COLOR_PALETTE[2]}[label])
 
 # Save the heatmap plot to a file 
-plt.savefig('EH23_homeolog_tissues_specific.png', dpi=300, bbox_inches='tight')
+plt.savefig('EH23_homeolog_tissues_specific.svg', dpi=300, bbox_inches='tight')
 
 # Show the plot
 plt.show()
@@ -160,7 +163,7 @@ axes[1].set_xticklabels([str(x) for x in xticks_a])
 plt.tight_layout()
 
 # Save the heatmap plot to a file
-plt.savefig('EH23_homeolog_global.png', dpi=300, bbox_inches='tight')
+plt.savefig('EH23_homeolog_global.svg', dpi=300, bbox_inches='tight')
 
 plt.show()
 
@@ -212,7 +215,7 @@ plt.xticks(x, counts_a.keys())
 plt.tight_layout()
 
 # Save the heatmap plot to a file 
-plt.savefig('EH23_homeolog_chr_level_specific.png', dpi=300, bbox_inches='tight')
+plt.savefig('EH23_homeolog_chr_level_specific.svg', dpi=300, bbox_inches='tight')
 
 # Show the plot
 plt.show()
