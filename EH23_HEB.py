@@ -3,6 +3,11 @@ import pandas as pd
 import os
 from matplotlib import pyplot
 import matplotlib.pyplot as plt
+import numpy as np
+########################
+#Load files
+########################
+
 df = pd.read_csv('EH23a_EH23b_ortholog_blast_fractionation.txt', sep=' ', header=None, names=["GID1", "GID2","ID"])
 df=df.drop("ID",axis=1)
 df.columns=("GID1","GID2")
@@ -23,6 +28,8 @@ quant = quant.drop(["Length", "EffectiveLength","NumReads"],axis=1)
 tpms = quant.set_index(['Name', "Sample"]).TPM.unstack().sort_index().sort_index(axis=1)
 out = "file11.tsv"
 tpms.to_csv(out, sep='\t', index=True)
+######################
+#Prepare
 ######################
 # Create a list to store the output lines
 output_lines = []
@@ -76,6 +83,10 @@ with open("file22.tsv", "a") as output_file:
 
 print("Results for all columns from file1 have been written to file22")
 
+###############################################################################
+#Tissues
+###############################################################################
+
 # Read the data from file2.txt
 df = pd.read_csv('file22.tsv', sep='\t')
 
@@ -87,7 +98,7 @@ count_df = df.apply(lambda row: row.value_counts(), axis=1).fillna(0).astype(int
 
 # Create a horizontally flipped stacked bar graph with custom colors
 ax = count_df.plot(kind='barh', stacked=True, figsize=(10, 6),
-                   color={"A": "brown", "B": "blue", "C": "lightgrey"})
+                   color={"A": "royalblue", "B": "darkorange", "C": "lightgrey"})
 
 # Set labels and title
 plt.title('EH23 Homoeolog Expression Bias (HEB)')
@@ -100,15 +111,14 @@ legend = ax.legend(title='Values', loc='lower center', labels=["A Biased", "B Bi
 
 # Set legend colors to match custom colors
 for handle, label in zip(legend.legend_handles, ["A", "B", "C"]):
-    handle.set_color({"A": "brown", "B": "blue", "C": "lightgrey"}[label])
+    handle.set_color({"A": "royalblue", "B": "darkorange", "C": "lightgrey"}[label])
 
 # Save the heatmap plot to a file 
 plt.savefig('EH23_homeolog_tissues_specific.png', dpi=300, bbox_inches='tight')
 
-# Show the plot
-plt.show()
-
-
+###############################################################################
+#Global
+###############################################################################
 df = pd.read_csv('file11.tsv', sep="\t") #tpms
 
 # Create a DataFrame from the sample data
@@ -128,14 +138,14 @@ df_b_log2 = -np.log2(df_b_values + 1)  # Adding 1 to avoid log(0) and negating t
 fig, axes = plt.subplots(1, 2, figsize=(12, 4), sharey=True)
 
 # Plot for "EH23b" (flipped) - Now plotted before "EH23a"
-hist_b, bins_b, _ = axes[0].hist(df_b_log2.values.flatten(), bins=20, color='blue', edgecolor='black')
+hist_b, bins_b, _ = axes[0].hist(df_b_log2.values.flatten(), bins=20, color='darkorange', edgecolor='black')
 axes[0].set_title('Homoeolog Expression Bias - EH23b')
 axes[0].set_xlabel('Log2 Expression')
 axes[0].set_ylabel('Count')
 axes[0].grid(axis='y', alpha=0.75)
 
 # Plot for "EH23a" - Now plotted after "EH23b"
-hist_a, bins_a, _ = axes[1].hist(df_a_log2.values.flatten(), bins=20, color='brown', edgecolor='black')
+hist_a, bins_a, _ = axes[1].hist(df_a_log2.values.flatten(), bins=20, color='royalblue', edgecolor='black')
 axes[1].set_title('Homoeolog Expression Bias - EH23a')
 axes[1].set_xlabel('Log2 Expression')
 axes[1].grid(axis='y', alpha=0.75)
@@ -160,48 +170,54 @@ plt.tight_layout()
 
 # Save the heatmap plot to a file
 plt.savefig('EH23_homeolog_global.png', dpi=300, bbox_inches='tight')
-
-plt.show()
-
+###############################################################################
+#Chromosomes
+###############################################################################
+# Load the data
 df = pd.read_csv('file22.tsv', sep="\t")
-
-df = pd.DataFrame(df)
 
 # Extract chromosome information from GID1 and GID2 columns
 chromosomes1 = df['GID1'].str.split('.').str[1].str.replace('chr', '')
 chromosomes2 = df['GID2'].str.split('.').str[1].str.replace('chr', '')
 
-# Initialize dictionaries to store counts of 'A' and 'B' for each chromosome
+# Initialize dictionaries to store counts of 'A', 'B', and 'C' for each chromosome
 counts_a = {}
 counts_b = {}
+counts_c = {}
 
-# Iterate through rows and count occurrences of 'A' and 'B' for each chromosome
+# Iterate through rows and count occurrences of 'A', 'B', and 'C' for each chromosome
 for i, row in df.iterrows():
     chrom1 = chromosomes1.loc[i]
     chrom2 = chromosomes2.loc[i]
-    
+
     if chrom1 != chrom2:
         continue  # Skip rows with different chromosomes
-    
+
     chrom = chrom1
-    
+
     if chrom not in counts_a:
         counts_a[chrom] = 0
     if chrom not in counts_b:
         counts_b[chrom] = 0
-    
+    if chrom not in counts_c:
+        counts_c[chrom] = 0
+
     counts_a[chrom] += row[['EH23_Early_Flower', 'EH23_Foliage', 'EH23_Foliage_12light',
                             'EH23_Late_Flower', 'EH23_Roots', 'EH23_Shoottips']].str.count('A').sum()
     counts_b[chrom] += row[['EH23_Early_Flower', 'EH23_Foliage', 'EH23_Foliage_12light',
                             'EH23_Late_Flower', 'EH23_Roots', 'EH23_Shoottips']].str.count('B').sum()
+    counts_c[chrom] += row[['EH23_Early_Flower', 'EH23_Foliage', 'EH23_Foliage_12light',
+                            'EH23_Late_Flower', 'EH23_Roots', 'EH23_Shoottips']].str.count('C').sum()
 
-# Create a bar plot for counts of 'A' and 'B' cumulatively by chromosomes
+# Create a bar plot for counts of 'A', 'B', and 'C' cumulatively by chromosomes
 fig, ax = plt.subplots(figsize=(10, 6))
 
-x = range(len(counts_a))
-width = 0.4
-ax.bar(x, counts_a.values(), width, label='EH23a', color='brown', align='center')
-ax.bar(x, counts_b.values(), width, label='EH23b', color='blue', align='edge')
+x = np.arange(len(counts_a))
+width = 0.25
+
+ax.bar(x - width, counts_a.values(), width, label='EH23a', color='royalblue', align='center')
+ax.bar(x, counts_b.values(), width, label='EH23b', color='darkorange', align='center')
+ax.bar(x + width, counts_c.values(), width, label='Balanced', color='lightgrey', align='center')
 
 ax.set_xlabel('Chromosome')
 ax.set_ylabel('Count')
@@ -210,9 +226,8 @@ ax.legend(title='Haplotype')
 plt.xticks(x, counts_a.keys())
 plt.tight_layout()
 
-# Save the heatmap plot to a file 
+# Save the bar plot to a file
 plt.savefig('EH23_homeolog_chr_level_specific.png', dpi=300, bbox_inches='tight')
 
 # Show the plot
-plt.show()
 plt.show()
