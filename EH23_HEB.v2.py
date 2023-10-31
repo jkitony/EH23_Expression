@@ -4,10 +4,6 @@ import os
 from matplotlib import pyplot
 import matplotlib.pyplot as plt
 import numpy as np
-
-COLOR_PALETTE = ("#1E90FF", "#FFA500", "lightgrey")
-PANEL_HEIGHT = 6.2/3
-PANEL_WIDTH = 4
 ########################
 #Load files
 ########################
@@ -39,9 +35,7 @@ tpms.to_csv(out, sep='\t', index=True)
 output_lines = []
 
 # Create a list of column headers to process
-columns_to_process = ["EH23_Early_Flower", "EH23_Foliage",
-                      "EH23_Foliage_12light", "EH23_Late_Flower",
-                      "EH23_Roots", "EH23_Shoottips"]
+columns_to_process = ["EH23_Early_Flower", "EH23_Foliage", "EH23_Foliage_12light", "EH23_Late_Flower", "EH23_Roots", "EH23_Shoottips"]
 
 # Initialize a dictionary to store values for each column
 column_values = {column: {} for column in columns_to_process}
@@ -101,37 +95,26 @@ df = df.set_index(['GID1', 'GID2']).T
 
 # Count occurrences of "A," "B," and "C" in each row
 count_df = df.apply(lambda row: row.value_counts(), axis=1).fillna(0).astype(int)
-count_df.index = ["Early Flower", "Foliage", "Foliage (12light)",
-                    "Late Flower", "Roots", "Shoot tips"]
 
 # Create a horizontally flipped stacked bar graph with custom colors
-ax = count_df.plot(kind='barh', stacked=True, figsize=(PANEL_WIDTH, PANEL_HEIGHT), edgecolor='black',
-                   color={"A": COLOR_PALETTE[0], "B": COLOR_PALETTE[1], "C": COLOR_PALETTE[2]})
+ax = count_df.plot(kind='barh', stacked=True, figsize=(10, 6),
+                   color={"A": "royalblue", "B": "darkorange", "C": "lightgrey"})
 
 # Set labels and title
-# plt.title('EH23 Homoeolog Expression Bias (HEB)')
-# plt.ylabel('Samples')
-
+plt.title('EH23 Homoeolog Expression Bias (HEB)')
+plt.ylabel('Samples')
 plt.xlabel('1:1 Gene Pairs')
 plt.yticks(rotation=0)
-plt.tight_layout()
 
 # Move the legend outside the plot using bbox_to_anchor
-legend = ax.legend(loc='lower center', labels=["A Biased", "B Biased", "Balanced"],
-                   bbox_to_anchor=(0.25, 1.05), ncol=3)
+legend = ax.legend(title='Values', loc='lower center', labels=["A Biased", "B Biased", "Balanced"], bbox_to_anchor=(0.5, -0.3), ncol=3)
 
 # Set legend colors to match custom colors
 for handle, label in zip(legend.legend_handles, ["A", "B", "C"]):
-    handle.set_color({"A": COLOR_PALETTE[0], "B": COLOR_PALETTE[1], "C": COLOR_PALETTE[2]}[label])
-    handle.set_edgecolor('black')
+    handle.set_color({"A": "royalblue", "B": "darkorange", "C": "lightgrey"}[label])
 
 # Save the heatmap plot to a file 
-plt.savefig('EH23_homeolog_tissues_specific.svg')
-# plt.savefig('EH23_homeolog_tissues_specific.svg', bbox_inches='tight')
-
-# Show the plot
-# plt.show()
-
+plt.savefig('EH23_homeolog_tissues_specific.png', dpi=300, bbox_inches='tight')
 
 ###############################################################################
 #Global
@@ -152,19 +135,19 @@ df_a_log2 = np.log2(df_a_values + 1)  # Adding 1 to avoid log(0)
 df_b_log2 = -np.log2(df_b_values + 1)  # Adding 1 to avoid log(0) and negating to flip
 
 # Create subplots for "EH23b" and "EH23a" with shared y-axis
-fig, axes = plt.subplots(1, 2, figsize=(PANEL_WIDTH, PANEL_HEIGHT), sharey=True, tight_layout=True)# , constrained_layout=True)
+fig, axes = plt.subplots(1, 2, figsize=(12, 4), sharey=True)
 
 # Plot for "EH23b" (flipped) - Now plotted before "EH23a"
-hist_b, bins_b, _ = axes[0].hist(df_b_log2.values.flatten(), bins=20, color=COLOR_PALETTE[1], edgecolor='black')
-# axes[0].set_title('Homoeolog Expression Bias - EH23b')
+hist_b, bins_b, _ = axes[0].hist(df_b_log2.values.flatten(), bins=20, color='darkorange', edgecolor='black')
+axes[0].set_title('Homoeolog Expression Bias - EH23b')
 axes[0].set_xlabel('Log2 Expression')
 axes[0].set_ylabel('Count')
 axes[0].grid(axis='y', alpha=0.75)
 
 # Plot for "EH23a" - Now plotted after "EH23b"
-hist_a, bins_a, _ = axes[1].hist(df_a_log2.values.flatten(), bins=20, color=COLOR_PALETTE[0], edgecolor='black')
-# axes[1].set_title('Homoeolog Expression Bias - EH23a')
-# axes[1].set_xlabel('Log2 Expression')
+hist_a, bins_a, _ = axes[1].hist(df_a_log2.values.flatten(), bins=20, color='royalblue', edgecolor='black')
+axes[1].set_title('Homoeolog Expression Bias - EH23a')
+axes[1].set_xlabel('Log2 Expression')
 axes[1].grid(axis='y', alpha=0.75)
 
 # Automatically adjust the x-axis labels for "EH23b"
@@ -177,18 +160,16 @@ max_label_a = int(np.ceil(np.max(bins_a)))
 min_label_a = int(np.floor(np.min(bins_a)))
 xticks_a = range(min_label_a, max_label_a + 1)
 
-# axes[0].set_xticks(xticks_b)
-# axes[0].set_xticklabels([str(x) for x in xticks_b])
+axes[0].set_xticks(xticks_b)
+axes[0].set_xticklabels([str(x) for x in xticks_b])
 
-# axes[1].set_xticks(xticks_a)
-# axes[1].set_xticklabels([str(x) for x in xticks_a])
+axes[1].set_xticks(xticks_a)
+axes[1].set_xticklabels([str(x) for x in xticks_a])
+
+plt.tight_layout()
 
 # Save the heatmap plot to a file
-plt.savefig('EH23_homeolog_global.svg')
-# plt.savefig('EH23_homeolog_global.svg', bbox_inches='tight')
-
-# plt.show()
-
+plt.savefig('EH23_homeolog_global.png', dpi=300, bbox_inches='tight')
 ###############################################################################
 #Chromosomes
 ###############################################################################
@@ -229,25 +210,24 @@ for i, row in df.iterrows():
                             'EH23_Late_Flower', 'EH23_Roots', 'EH23_Shoottips']].str.count('C').sum()
 
 # Create a bar plot for counts of 'A', 'B', and 'C' cumulatively by chromosomes
-fig, ax = plt.subplots(figsize=(PANEL_WIDTH, PANEL_HEIGHT), tight_layout=True)#, constrained_layout=True)
+fig, ax = plt.subplots(figsize=(10, 6))
 
 x = np.arange(len(counts_a))
 width = 0.25
 
-ax.bar(x - width, counts_a.values(), width, label='EH23a', color=COLOR_PALETTE[0], align='center', edgecolor='black')
-ax.bar(x, counts_b.values(), width, label='EH23b', color=COLOR_PALETTE[1], align='center', edgecolor='black')
-ax.bar(x + width, counts_c.values(), width, label='Balanced', color=COLOR_PALETTE[2], align='center', edgecolor='black')
+ax.bar(x - width, counts_a.values(), width, label='EH23a', color='royalblue', align='center')
+ax.bar(x, counts_b.values(), width, label='EH23b', color='darkorange', align='center')
+ax.bar(x + width, counts_c.values(), width, label='Balanced', color='lightgrey', align='center')
 
 ax.set_xlabel('Chromosome')
 ax.set_ylabel('Count')
-ax.set_yscale('log')
+ax.legend(title='Haplotype')
 
 plt.xticks(x, counts_a.keys())
+plt.tight_layout()
 
-# Save the heatmap plot to a file 
-plt.savefig('EH23_homeolog_chr_level_specific.svg')
-# plt.savefig('EH23_homeolog_chr_level_specific.svg', bbox_inches='tight')
+# Save the bar plot to a file
+plt.savefig('EH23_homeolog_chr_level_specific.png', dpi=300, bbox_inches='tight')
 
 # Show the plot
-# plt.show()
-# plt.show()
+plt.show()
