@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 COLOR_PALETTE = ("#1E90FF", "#FFA500", "lightgrey")
-PANEL_HEIGHT = 6.2/3
-PANEL_WIDTH = 4
+PANEL_HEIGHT = 6.0/3
+PANEL_WIDTH = 3
 ########################
 #Load files
 ########################
@@ -118,7 +118,7 @@ plt.tight_layout()
 
 # Move the legend outside the plot using bbox_to_anchor
 legend = ax.legend(loc='lower center', labels=["A Biased", "B Biased", "Balanced"],
-                   bbox_to_anchor=(0.25, 1.05), ncol=3)
+                   bbox_to_anchor=(0.25, 1.05), ncol=2)
 
 # Set legend colors to match custom colors
 for handle, label in zip(legend.legend_handles, ["A", "B", "C"]):
