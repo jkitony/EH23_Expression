@@ -1,0 +1,5 @@
+#Eggnog
+#/data1/jkitony/Cannabis/rev1_EH23
+aws s3 cp s3://salk-tm-shared/csat/releases/scaffolded/EH23a/EH23a.transcript_summary.tsv.gz .
+aws s3 cp s3://salk-tm-shared/csat/releases/scaffolded/EH23b/EH23b.transcript_summary.tsv.gz .
+gunzip *.gz
