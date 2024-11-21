@@ -14,6 +14,7 @@ awk 'NR==FNR {ids[$1]; next} $2 in ids {print $1, $2, $15, $32}' OFS="\t"  EH23_
 #Lillian GO analysis
 
 #Allele specific expressions
+#C:\Cannabis\ms_rev1
 import pandas as pd
 
 # Load the orthologs data
