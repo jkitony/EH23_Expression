@@ -3,3 +3,189 @@
 aws s3 cp s3://salk-tm-shared/csat/releases/scaffolded/EH23a/EH23a.transcript_summary.tsv.gz .
 aws s3 cp s3://salk-tm-shared/csat/releases/scaffolded/EH23b/EH23b.transcript_summary.tsv.gz .
 gunzip *.gz
+(base) jkitony@jkitony:/mnt/c/Cannabis/ms_rev1/IDs_function$ 
+cat EH23a.transcript_summary.tsv EH23b.transcript_summary.tsv > EH23ab_transcript_summary.tsv
+cat EH23_Early_Flower_category_A.txt EH23_Early_Flower_category_B.txt > EH23_Early_Flower_category_AB.txt
+
+#Annotate ASE genes
+awk 'NR==FNR {ids[$1]; next} $1 in ids' EH23_Early_Flower_category_AB.txt EH23ab_transcript_summary.tsv > EH23_Early_Flower_Functions.tsv
+awk 'NR==FNR {ids[$1]; next} $2 in ids {print $1, $2, $15, $32}' OFS="\t"  EH23_Early_Flower_category_AB.txt EH23ab_transcript_summary.tsv > EH23_Early_Flower_Functions.tsv
+
+
+
+#Allele specific expressions
+import pandas as pd
+
+# Load the orthologs data
+df = pd.read_csv('EH23a_EH23b_ortholog_blast_fractionation.txt', sep=' ', header=None, names=["GID1", "GID2", "ID"])
+df = df.drop("ID", axis=1)
+df.columns = ("GID1", "GID2")
+df['GID1'] = df['GID1']
+df['GID2'] = df['GID2']
+
+# 1:1 ortholog lifting
+C1 = df.GID1.value_counts()
+Uniq1 = C1[C1 == 1]
+C2 = df.GID2.value_counts()
+Uniq2 = C2[C2 == 1]
+df0 = df[df.GID1.isin(Uniq1.index) & df.GID2.isin(Uniq2.index)]
+out1 = "file22.tsv"
+df0.to_csv(out1, sep='\t', index=False)
+
+# Read salmon quant file
+quant = pd.read_csv('quant.tsv', sep='\t')
+quant = quant.drop(["Length", "EffectiveLength", "NumReads"], axis=1)
+
+# Pivot TPM values
+tpms = quant.set_index(['Name', "Sample"]).TPM.unstack().sort_index().sort_index(axis=1)
+out = "file11.tsv"
+tpms.to_csv(out, sep='\t', index=True)
+
+######################
+# Prepare file33.tsv
+######################
+# Read the TPM values
+column_values = {column: {} for column in tpms.columns}
+
+# Populate the dictionary with TPM values
+for column in tpms.columns:
+    column_values[column] = tpms[column].to_dict()
+
+# Prepare file33.tsv
+file33_lines = []
+
+# Add headers for file33.tsv
+columns_to_process = ["EH23_Early_Flower", "EH23_Foliage", "EH23_Foliage_12light", "EH23_Late_Flower", "EH23_Roots", "EH23_Shoottips"]
+header33 = []
+for column in columns_to_process:
+    header33.extend([f"{column}_Summary", f"{column}_Value1", f"{column}_Value2"])
+file33_lines.append("\t".join(["GID1", "GID2"] + header33) + "\n")
+
+# Read the mapping from file22.tsv and write to file33.tsv
+with open("file22.tsv", "r") as file22:
+    mapping_lines = file22.readlines()
+
+for line in mapping_lines[1:]:  # Skip the header
+    gid1, gid2 = line.strip().split('\t')[:2]
+    row = [gid1, gid2]
+    for column in columns_to_process:
+        value1 = column_values[column].get(gid1, 0)
+        value2 = column_values[column].get(gid2, 0)
+        
+        # Determine the summary category
+        if abs(value1 - value2) <= 5:
+            summary = "C"
+        elif value1 > value2:
+            summary = "A"
+        else:
+            summary = "B"
+        
+        row.extend([summary, value1, value2])
+    file33_lines.append("\t".join(map(str, row)) + "\n")
+
+with open("file33.tsv", "w") as file33:
+    file33.writelines(file33_lines)
+
+print("File33.tsv with summaries and TPM values has been created.")
+
+################################################################################################
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import zscore
+
+# Set global style and bold fonts
+plt.rcParams.update({
+    "font.size": 12,           # Set font size
+    "font.weight": "bold",     # Make text bold
+    "axes.titleweight": "bold",
+    "axes.labelweight": "bold",
+    "xtick.labelsize": 10,
+    "ytick.labelsize": 10
+})
+sns.set_context("talk", font_scale=1.2)  # Adjust font scale for publication quality
+
+# Load the data
+file33 = pd.read_csv("file33.tsv", sep="\t")
+
+# Extract tissue names
+tissues = ["EH23_Early_Flower", "EH23_Foliage", "EH23_Foliage_12light", "EH23_Late_Flower", "EH23_Roots", "EH23_Shoottips"]
+
+# Identify rows biased to Hap1 (at least one "A", no "B")
+hap1_mask = (
+    file33[[f"{tissue}_Summary" for tissue in tissues]].apply(lambda x: "A" in x.values and "B" not in x.values, axis=1)
+)
+
+# Identify rows biased to Hap2 (at least one "B", no "A")
+hap2_mask = (
+    file33[[f"{tissue}_Summary" for tissue in tissues]].apply(lambda x: "B" in x.values and "A" not in x.values, axis=1)
+)
+
+# Filter rows
+hap1_data = file33[hap1_mask]
+hap2_data = file33[hap2_mask]
+
+# Save gene pairs to files
+hap1_data[["GID1", "GID2"]].to_csv("Hap1_biased_genes.tsv", sep="\t", index=False, header=True)
+hap2_data[["GID1", "GID2"]].to_csv("Hap2_biased_genes.tsv", sep="\t", index=False, header=True)
+
+# Helper function to prepare heatmap data with z-scoring
+def prepare_heatmap_data(data, tissues):
+    heatmap_data = []
+    row_labels = []
+
+    for index, row in data.iterrows():
+        combined_id = f"{row['GID1']}_{row['GID2']}"
+        row_labels.append(combined_id)
+        values = []
+        for tissue in tissues:
+            values.extend([row[f"{tissue}_Value1"], row[f"{tissue}_Value2"]])
+        
+        # Apply z-score normalization to the row values
+        values = zscore(values) if len(set(values)) > 1 else values  # Avoid division by zero for constant rows
+        heatmap_data.append(values)
+
+    # Convert to DataFrame
+    heatmap_df = pd.DataFrame(
+        heatmap_data,
+        columns=[f"{tissue}_{allele}" for tissue in tissues for allele in ["Allele1", "Allele2"]],
+        index=row_labels
+    )
+    return heatmap_df
+
+# Prepare heatmap data for Hap1 with z-score normalization
+hap1_heatmap_data = prepare_heatmap_data(hap1_data, tissues)
+
+# Prepare heatmap data for Hap2 with z-score normalization
+hap2_heatmap_data = prepare_heatmap_data(hap2_data, tissues)
+
+# Plot heatmap function with smooth gradient
+def plot_heatmap(data, title, output_pdf, output_png):
+    plt.figure(figsize=(12, 8))
+    sns.heatmap(
+        data, cmap="viridis", cbar_kws={"label": "Z-Score"},
+        linewidths=0.3, linecolor="gray", center=0
+    )
+    plt.title(title, fontsize=14, fontweight="bold")
+    plt.xlabel("Tissues and Alleles", fontsize=12, fontweight="bold")
+    plt.ylabel("1:1 Gene Pairs", fontsize=12, fontweight="bold")
+    plt.xticks(fontsize=10, fontweight="bold")
+    plt.yticks(fontsize=10, fontweight="bold")
+    plt.tight_layout()
+    plt.savefig(output_pdf)
+    plt.savefig(output_png)
+    plt.close()
+
+# Generate Hap1 heatmap
+plot_heatmap(hap1_heatmap_data, "Expression Heatmap (Z-Score) - EH23a Bias", 
+             "Expression_heatmap_Hap1_ZScore.pdf", "Expression_heatmap_Hap1_ZScore.png")
+
+# Generate Hap2 heatmap
+plot_heatmap(hap2_heatmap_data, "Expression Heatmap (Z-Score) - EH23b Bias", 
+             "Expression_heatmap_Hap2_ZScore.pdf", "Expression_heatmap_Hap2_ZScore.png")
+
+print("Heatmaps generated as PDF and PNG: Expression_heatmap_Hap1_ZScore and Expression_heatmap_Hap2_ZScore")
+print("Gene pairs saved: Hap1_biased_genes.tsv and Hap2_biased_genes.tsv")
+
+
+
