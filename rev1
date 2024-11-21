@@ -11,7 +11,7 @@ cat EH23_Early_Flower_category_A.txt EH23_Early_Flower_category_B.txt > EH23_Ear
 awk 'NR==FNR {ids[$1]; next} $1 in ids' EH23_Early_Flower_category_AB.txt EH23ab_transcript_summary.tsv > EH23_Early_Flower_Functions.tsv
 awk 'NR==FNR {ids[$1]; next} $2 in ids {print $1, $2, $15, $32}' OFS="\t"  EH23_Early_Flower_category_AB.txt EH23ab_transcript_summary.tsv > EH23_Early_Flower_Functions.tsv
 
-
+#Lillian GO analysis
 
 #Allele specific expressions
 import pandas as pd
