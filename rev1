@@ -188,5 +188,155 @@ plot_heatmap(hap2_heatmap_data, "Expression Heatmap (Z-Score) - EH23b Bias",
 print("Heatmaps generated as PDF and PNG: Expression_heatmap_Hap1_ZScore and Expression_heatmap_Hap2_ZScore")
 print("Gene pairs saved: Hap1_biased_genes.tsv and Hap2_biased_genes.tsv")
 
+##################################
+#run and plot topGO and KEGG
+##################################
+#########################################################################################################################
+#########################################################################################################################
+#TOPGO ANALYSIS
+#########################################################################################################################
+#########################################################################################################################
+
+rm(list = ls())
+# Set working directory
+setwd("C:/Cannabis/ms_rev1")
+
+# Load required packages
+library(topGO)
+library(dplyr)
+library(ggplot2)
+library(wordcloud)
+
+# Function to process input files and perform GO enrichment analysis
+process_GO_analysis <- function(transcript_file, gene_list_file, output_prefix) {
+  # Step 1: Read the EggNOG-mapper TSV file
+  eggnog_data <- read.delim(transcript_file, header = TRUE, sep = "\t")
+  
+  # Step 2: Filter rows with non-empty GO terms
+  filtered_data <- eggnog_data %>% filter(GOS != "")
+  
+  # Step 3: Create a gene2GO mapping
+  gene2GO <- filtered_data %>%
+    select(TID, GOS) %>%
+    mutate(GOS = strsplit(as.character(GOS), ",")) %>% # Split GO terms by commas
+    group_by(TID) %>%
+    summarise(GOS = list(unique(unlist(GOS)))) %>%
+    { setNames(.$GOS, .$TID) } # Convert to a named list
+  
+  # Step 4: Load Gene List (Genes of Interest)
+  genes_of_interest <- read.table(gene_list_file, header = FALSE, stringsAsFactors = FALSE)$V1
+  
+  # Step 5: Create a named vector for allGenes (1 for genes of interest, 0 otherwise)
+  all_genes <- names(gene2GO)
+  geneList <- ifelse(all_genes %in% genes_of_interest, 1, 0)
+  names(geneList) <- all_genes
+  
+  # Step 6: Create the topGOdata object
+  topGOdata <- new(
+    "topGOdata",
+    ontology = "BP", # Biological Process
+    allGenes = geneList,
+    geneSel = function(x) x == 1,
+    annot = annFUN.gene2GO,
+    gene2GO = gene2GO
+  )
+  
+  # Step 7: Run Enrichment Analysis
+  resultFisher <- runTest(topGOdata, algorithm = "classic", statistic = "fisher")
+  resultWeight <- runTest(topGOdata, algorithm = "weight01", statistic = "fisher")
+  
+  # Step 8: Save full results table with all GO terms
+  fullResults <- GenTable(
+    topGOdata,
+    classicFisher = resultFisher,
+    weightFisher = resultWeight,
+    orderBy = "weightFisher", # Sort by weightFisher
+    topNodes = length(score(resultWeight)) # Include all GO terms
+  )
+  
+  # Add adjusted p-values (FDR correction) for weightFisher
+  fullResults$p.adj <- p.adjust(as.numeric(fullResults$weightFisher), method = "fdr")
+  
+  # Save the full results table to a TSV file
+  write.table(
+    fullResults,
+    file = paste0(output_prefix, "_GO_enrichment_full_results_with_padj.tsv"),
+    sep = "\t",
+    row.names = FALSE,
+    quote = FALSE
+  )
+  
+  # Step 9: Generate top 15 results for visualization
+  top15Results <- fullResults[1:15, ]
+  top15Results$log10_pval <- -log10(as.numeric(top15Results$classicFisher))
+  top15Results$GeneRatio <- top15Results$Significant / top15Results$Annotated
+  
+  # Step 10: Visualization - Bar Plot
+  bar_plot <- ggplot(top15Results, aes(x = reorder(Term, log10_pval), y = log10_pval)) +
+    geom_bar(stat = "identity", fill = "skyblue") +
+    coord_flip() +
+    labs(
+      title = paste0("Top 15 Enriched GO Terms - ", output_prefix),
+      x = "GO Terms",
+      y = "-log10(p-value)"
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(
+      text = element_text(face = "bold"),
+      plot.title = element_text(hjust = 0.5)
+    )
+  ggsave(paste0(output_prefix, "_GO_enrichment_barplot.pdf"), plot = bar_plot, width = 8, height = 6, dpi = 300)
+  ggsave(paste0(output_prefix, "_GO_enrichment_barplot.png"), plot = bar_plot, width = 8, height = 6, dpi = 300)
+  
+  # Step 11: Visualization - Dot Plot
+  dot_plot <- ggplot(top15Results, aes(x = GeneRatio, y = reorder(Term, GeneRatio))) +
+    geom_point(aes(size = Significant, color = p.adj)) +
+    scale_color_gradient(low = "red", high = "blue", name = "Adjusted p-value") +
+    scale_size_continuous(name = "Gene Count") +
+    labs(
+      title = paste0("Top 15 Enriched GO Terms - ", output_prefix),
+      x = "Gene Ratio (Significant/Annotated)",
+      y = "GO Terms"
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(
+      text = element_text(face = "bold"),
+      plot.title = element_text(hjust = 0.5),
+      legend.position = "right"
+    )
+  ggsave(paste0(output_prefix, "_GO_enrichment_dotplot_colored.pdf"), plot = dot_plot, width = 8, height = 6, dpi = 300)
+  ggsave(paste0(output_prefix, "_GO_enrichment_dotplot_colored.png"), plot = dot_plot, width = 8, height = 6, dpi = 300)
+  
+  # Step 12: Visualization - Word Cloud
+  words <- top15Results$Term
+  freq <- top15Results$log10_pval
+  png(paste0(output_prefix, "_GO_enrichment_wordcloud.png"), width = 2000, height = 2000, res = 300)
+  wordcloud(words, freq, colors = brewer.pal(8, "Dark2"), random.order = FALSE, scale = c(3, 0.5))
+  dev.off()
+  pdf(paste0(output_prefix, "_GO_enrichment_wordcloud.pdf"), width = 8, height = 8)
+  wordcloud(words, freq, colors = brewer.pal(8, "Dark2"), random.order = FALSE, scale = c(3, 0.5))
+  dev.off()
+  
+  # Return the topGOdata object and results
+  list(topGOdata = topGOdata, fullResults = fullResults, top15Results = top15Results)
+}
+
+# Process Hap1
+hap1_results <- process_GO_analysis(
+  transcript_file = "EH23a.transcript_summary.tsv",
+  gene_list_file = "Hap1_biased_genes.tsv",
+  output_prefix = "Hap1"
+)
+
+# Process Hap2
+hap2_results <- process_GO_analysis(
+  transcript_file = "EH23b.transcript_summary.tsv",
+  gene_list_file = "Hap2_biased_genes.tsv",
+  output_prefix = "Hap2"
+)
+
+
+
+
 
 
