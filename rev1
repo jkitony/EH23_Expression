@@ -10,7 +10,7 @@ cd workflows/snake_salmon/
 #ERBxHO40 to EH23a/b #SHORT READS
 nano workflows/snake_salmon/configs/OCBD_EH23a_b_final.json
 
-nohup snakemake -p -j 6 --use-conda --use-singularity --tibanna \
+nohup snakemake -p -j 12 --use-conda --use-singularity --tibanna \
     --tibanna-config root_ebs_size=32 log_bucket=salk-tm-logs run_name=EH23_salmon_keepdups\
     --default-remote-prefix salk-tm-dev/cannabis/PanGenome_OCBD/RNA_Seq_Raw_Reads/ \
     --default-resources mem_mb=200000 disk_mb=2000000 \
