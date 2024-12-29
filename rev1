@@ -17,7 +17,7 @@ nohup snakemake -p -j 12 --use-conda --use-singularity --tibanna \
     --configfile configs/EH23_rev1_keepdups.json \
     --config \
         reference=EH23.concat.primary_high_confidence.cds.fasta \
-        outbase=quants/EH23_final_salmon_keepdups > logs/EH23_final_salmon12282024.log 2>&1 &
+        outbase=quants/EH23_final_salmon_keepdups > logs/EH23_final_salmon12282024.v1.log 2>&1 &
 
 
 
